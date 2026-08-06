@@ -114,7 +114,7 @@ func TestJsParity(t *testing.T) {
 			}
 		}
 
-		combinationIndex := combinationIndexForRand(iconRand)
+		combinationIndex := combinationIndexForRand(iconRand, colorCombinations)
 		if combinationIndex != f.PredictedColorIndex {
 			t.Fatalf("%s: combination index %d != %d", f.Input, combinationIndex, f.PredictedColorIndex)
 		}

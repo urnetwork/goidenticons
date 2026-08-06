@@ -19,13 +19,15 @@ Generates an identicon png image from an input string. The icon is rendered at t
 nearest multiple of 32px and scaled to fit size x size.
 
 Usage:
-    identiconctl generate <input> [--size=<size>] [--out=<out>]
+    identiconctl generate <input> [--size=<size>] [--scheme=<scheme>] [--out=<out>]
 
 Options:
-    -h --help        Show this screen.
-    --version        Show version.
-    --size=<size>    Target square size in pixels [default: 128].
-    --out=<out>      Output png file path [default: identicon.png].`
+    -h --help          Show this screen.
+    --version          Show version.
+    --size=<size>      Target square size in pixels [default: 128].
+    --scheme=<scheme>  Color scheme: 1 (original js palette) or 2 (URnetwork brand
+                       palette) [default: 1].
+    --out=<out>        Output png file path [default: identicon.png].`
 
 	opts, err := docopt.ParseArgs(usage, os.Args[1:], IdenticonCtlVersion)
 	if err != nil {
@@ -46,7 +48,17 @@ func generate(opts docopt.Opts) {
 	}
 	outPath, _ := opts.String("--out")
 
-	pngBytes, err := goidenticons.RenderPng([]byte(input), size)
+	renderPng := goidenticons.RenderPng
+	switch scheme, _ := opts.String("--scheme"); scheme {
+	case "1":
+	case "2":
+		renderPng = goidenticons.RenderPngV2
+	default:
+		fmt.Fprintf(os.Stderr, "unknown scheme: %s\n", scheme)
+		os.Exit(1)
+	}
+
+	pngBytes, err := renderPng([]byte(input), size)
 	if err != nil {
 		panic(err)
 	}

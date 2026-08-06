@@ -1,8 +1,15 @@
 // Package goidenticons generates identicon png images from arbitrary byte slices.
 //
-// This is a port of the Nanoidenticons js library (wtfpl, itself based on Blockies).
-// The pattern, colors, and geometry are an exact match of the js render for the same
-// seed string (verified against recordings of the js library in the tests).
+// The engine is a port of the Nanoidenticons js library (wtfpl, itself based on
+// Blockies). The pattern and geometry are an exact match of the js render for the
+// same seed string (verified against recordings of the js library in the tests).
+//
+// Two frozen color schemes share the engine (see the compatibility contract in the
+// README). For a given input both schemes produce the same cell pattern; only the
+// color table differs:
+//   - v1 (RenderImage, RenderPng): the js library's palette, an exact color match
+//     of the js render.
+//   - v2 (RenderImageV2, RenderPngV2): the URnetwork brand palette.
 //
 // The input bytes are reduced to the prng seed by hashing: the seed string is the
 // lowercase hex sha256 digest of the input, which maps arbitrary length input onto the
@@ -162,8 +169,8 @@ func createCellValues(iconRand *xorshiftRand) []int {
 
 // combinationIndexForRand picks the color combination index like the js addColorOpts.
 // rand() < 1 always, so the index is always in range.
-func combinationIndexForRand(iconRand *xorshiftRand) int {
-	return int(math.Floor(iconRand.rand() * float64(len(colorCombinations))))
+func combinationIndexForRand(iconRand *xorshiftRand, combinations [][3]hslColor) int {
+	return int(math.Floor(iconRand.rand() * float64(len(combinations))))
 }
 
 // pathOpKind enumerates the fill path drawing ops.
@@ -308,16 +315,15 @@ func rasterize(cellValues []int, combination [3]hslColor, renderSize int) *image
 	return renderImage
 }
 
-// RenderImage renders the identicon for data as an opaque size x size image.
-// The icon is rendered at the nearest multiple of 32 px and resampled to fit the target
-// size exactly.
-func RenderImage(data []byte, size int) (*image.RGBA, error) {
+// renderImageWithCombinations renders the identicon for data against the given color
+// combination table.
+func renderImageWithCombinations(data []byte, size int, combinations [][3]hslColor) (*image.RGBA, error) {
 	if size < 1 {
 		return nil, fmt.Errorf("size must be positive: %d", size)
 	}
 	iconRand := newIconRand(seedForData(data))
 	cellValues := createCellValues(iconRand)
-	combination := colorCombinations[combinationIndexForRand(iconRand)]
+	combination := combinations[combinationIndexForRand(iconRand, combinations)]
 
 	renderSize := renderSizeForSize(size)
 	renderImage := rasterize(cellValues, combination, renderSize)
@@ -330,9 +336,10 @@ func RenderImage(data []byte, size int) (*image.RGBA, error) {
 	return targetImage, nil
 }
 
-// RenderPng renders the identicon for data as an opaque size x size png.
-func RenderPng(data []byte, size int) ([]byte, error) {
-	renderImage, err := RenderImage(data, size)
+// renderPngWithCombinations renders the identicon for data as a png against the given
+// color combination table.
+func renderPngWithCombinations(data []byte, size int, combinations [][3]hslColor) ([]byte, error) {
+	renderImage, err := renderImageWithCombinations(data, size, combinations)
 	if err != nil {
 		return nil, err
 	}
@@ -341,4 +348,28 @@ func RenderPng(data []byte, size int) ([]byte, error) {
 		return nil, err
 	}
 	return pngBuffer.Bytes(), nil
+}
+
+// RenderImage renders the v1 scheme identicon for data as an opaque size x size image.
+// The icon is rendered at the nearest multiple of 32 px and resampled to fit the target
+// size exactly.
+func RenderImage(data []byte, size int) (*image.RGBA, error) {
+	return renderImageWithCombinations(data, size, colorCombinations)
+}
+
+// RenderPng renders the v1 scheme identicon for data as an opaque size x size png.
+func RenderPng(data []byte, size int) ([]byte, error) {
+	return renderPngWithCombinations(data, size, colorCombinations)
+}
+
+// RenderImageV2 renders the v2 scheme identicon for data as an opaque size x size
+// image: the same pattern and geometry as v1, colored with the URnetwork brand
+// palette (colorCombinationsV2).
+func RenderImageV2(data []byte, size int) (*image.RGBA, error) {
+	return renderImageWithCombinations(data, size, colorCombinationsV2)
+}
+
+// RenderPngV2 renders the v2 scheme identicon for data as an opaque size x size png.
+func RenderPngV2(data []byte, size int) ([]byte, error) {
+	return renderPngWithCombinations(data, size, colorCombinationsV2)
 }
