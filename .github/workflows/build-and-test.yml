@@ -1,4 +1,15 @@
-name: Test — goidenticons
+# Build and test goidenticons on every push and pull request.
+#
+# THIS WORKFLOW DOES NOT RELEASE ANYTHING — no tags, no artifacts attached to
+# releases, no publishing, no secrets. A gate, not a pipeline.
+#
+# goidenticons is a pure rendering library: it turns an id into a deterministic
+# image. What breaks here is the pixels, quietly — a change to the palette, the
+# grid or the rasterizer still compiles and still returns a PNG, it just returns
+# a different one. So compiling is not the check that matters; the golden and
+# parity tests are. Those run below, and the one of them that is currently
+# architecture-dependent is called out rather than hidden (see the last step).
+name: Build and test — goidenticons
 
 on:
   push:
@@ -12,10 +23,21 @@ on:
 permissions:
   contents: read
 
+# connect/test.yml and sdk/test.yml (the two oldest) set neither concurrency
+# nor timeout-minutes, so a busy branch stacks runs there and a hung job sits
+# on GitHub's 6h default. server/test.yml and linux/build.yml (the two newest)
+# set both. New workflows follow the newer habit.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
     name: go test
     runs-on: ubuntu-latest
+    # Bounded on purpose: GitHub's default is 6h. The whole job runs in well
+    # under a minute today, so this only ever fires on a hang.
+    timeout-minutes: 15
     steps:
       - name: Check out goidenticons
         uses: actions/checkout@v4
@@ -30,6 +52,9 @@ jobs:
       # sdk/connect/server/proxy this needs no sibling checkouts.
       - name: Build
         run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
 
       # -count=1 defeats the test result cache so a green run always means the
       # tests actually ran.
