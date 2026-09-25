@@ -56,7 +56,7 @@ android app `ui/theme/Color.kt`.
 License
 ---
 
-Ported from Nanoidenticons ([WTFPL](http://www.wtfpl.net/)).
+[MPL-2.0](LICENSE). Ported from Nanoidenticons ([WTFPL](http://www.wtfpl.net/)).
 
 Compatibility contract
 ---
