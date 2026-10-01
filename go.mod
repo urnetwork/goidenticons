@@ -1,4 +1,4 @@
-module github.com/urnetwork/goidenticons
+module github.com/urnetwork/goidenticons/v2026
 
 go 1.26.5
 
