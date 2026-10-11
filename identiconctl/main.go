@@ -7,7 +7,7 @@ import (
 
 	"github.com/docopt/docopt-go"
 
-	"github.com/urnetwork/goidenticons"
+	"github.com/urnetwork/goidenticons/v2026"
 )
 
 const IdenticonCtlVersion = "0.0.1"
